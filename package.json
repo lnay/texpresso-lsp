@@ -1,0 +1,13 @@
+{
+  "name": "texpresso-lsp",
+  "version": "1.0.0",
+  "description": "A simple Language Server Protocol implementation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  }
+} 
