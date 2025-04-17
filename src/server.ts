@@ -21,10 +21,11 @@ import {
     DocumentStatistics,
     isCustomDiagnostic
 } from './types';
+import { TexpressoProcessManager } from './process-manager';
 
 // Default server configuration
 const defaultConfig: ServerConfig = {
-    maxLineLength: 80,
+    maxLineLength: 50,
     enableWarnings: true,
     customRules: []
 };
@@ -35,33 +36,71 @@ const connection = createConnection(ProposedFeatures.all);
 // Create a simple text document manager
 const documents = new TextDocuments(TextDocument);
 
+// Create the texpresso process manager
+const texpressoProcess = new TexpressoProcessManager();
+
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
 
 // After the server has started the client sends an initialize request
-connection.onInitialize((params: InitializeParams): InitializeResult => {
-    return {
-        capabilities: {
-            textDocumentSync: TextDocumentSyncKind.Incremental,
-            // Add other capabilities here as needed
-        }
-    };
+connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
+    try {
+        // Start the texpresso process
+        await texpressoProcess.start();
+        connection.console.log('Texpresso process started successfully');
+
+        // Set up process event handlers
+        texpressoProcess.on('error', (error: Error) => {
+            connection.console.error(`Texpresso process error: ${error.message}`);
+        });
+
+        texpressoProcess.on('exit', (data: { code: number | null; signal: NodeJS.Signals | null }) => {
+            connection.console.log(`Texpresso process exited with code ${data.code} and signal ${data.signal}`);
+        });
+
+        return {
+            capabilities: {
+                textDocumentSync: TextDocumentSyncKind.Incremental,
+                // Add other capabilities here as needed
+            }
+        };
+    } catch (error) {
+        connection.console.error(`Failed to start texpresso process: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+    }
 });
 
 // Handle text document changes
-documents.onDidChangeContent((changeEvent: TextDocumentChangeEvent<TextDocument>) => {
+documents.onDidChangeContent(async (changeEvent: TextDocumentChangeEvent<TextDocument>) => {
     const document = changeEvent.document;
     if (!document) return;
 
-    // Analyze the document and generate diagnostics
-    const analysisResult = analyzeDocument(document, defaultConfig);
-    
-    // Send the diagnostics to the client
-    connection.sendDiagnostics({
-        uri: document.uri,
-        diagnostics: analysisResult.diagnostics
-    });
+    try {
+        // Send document content to texpresso process
+        const response = await texpressoProcess.sendCommand(document.getText());
+        
+        // Analyze the document and generate diagnostics
+        const analysisResult = analyzeDocument(document, defaultConfig);
+        
+        // Send the diagnostics to the client
+        connection.sendDiagnostics({
+            uri: document.uri,
+            diagnostics: analysisResult.diagnostics
+        });
+    } catch (error) {
+        connection.console.error(`Error processing document: ${error instanceof Error ? error.message : String(error)}`);
+    }
+});
+
+// Handle server shutdown
+connection.onShutdown(async () => {
+    try {
+        await texpressoProcess.stop();
+        connection.console.log('Texpresso process stopped successfully');
+    } catch (error) {
+        connection.console.error(`Error stopping texpresso process: ${error instanceof Error ? error.message : String(error)}`);
+    }
 });
 
 // Analyze document with TypeScript features
