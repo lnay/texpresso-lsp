@@ -100,8 +100,8 @@ export class TexpressoProcessManager extends EventEmitter {
                 }
             };
 
-            this.process.stdout.on('data', dataHandler);
-            this.process.stdin.write(command + '\n');
+            this.process?.stdout?.on('data', dataHandler);
+            this.process?.stdin?.write(command + '\n');
         });
     }
 
