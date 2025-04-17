@@ -22,6 +22,7 @@ import {
     isCustomDiagnostic
 } from './types';
 import { TexpressoProcessManager } from './process-manager';
+import { spawn } from 'child_process';
 
 // Default server configuration
 const defaultConfig: ServerConfig = {
@@ -59,6 +60,19 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
             connection.console.log(`Texpresso process exited with code ${data.code} and signal ${data.signal}`);
         });
 
+        texpressoProcess.on('synctex', (data) => {
+            connection.console.log(`Synctex inverse search received: ${JSON.stringify(data)}`);
+            const file = data[0];
+            const line = data[1];
+            const column = 1; // data[2];
+            
+            spawn("zed", [`${file}:${line}:${column}`]);
+        });
+
+        texpressoProcess.on('append-lines', (data) => {
+            connection.console.log(`Append lines received: ${JSON.stringify(data)}`);
+        });
+
         return {
             capabilities: {
                 textDocumentSync: TextDocumentSyncKind.Incremental,
@@ -76,21 +90,7 @@ documents.onDidChangeContent(async (changeEvent: TextDocumentChangeEvent<TextDoc
     const document = changeEvent.document;
     if (!document) return;
 
-    try {
-        // Send document content to texpresso process
-        const response = await texpressoProcess.sendCommand(document.getText());
-        
-        // Analyze the document and generate diagnostics
-        const analysisResult = analyzeDocument(document, defaultConfig);
-        
-        // Send the diagnostics to the client
-        connection.sendDiagnostics({
-            uri: document.uri,
-            diagnostics: analysisResult.diagnostics
-        });
-    } catch (error) {
-        connection.console.error(`Error processing document: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    return;
 });
 
 // Handle server shutdown

@@ -23,7 +23,14 @@ export class TexpressoProcessManager extends EventEmitter {
 
             // Handle process events
             this.process.stdout?.on('data', (data: Buffer) => {
-                this.emit('stdout', data.toString());
+                data.toString().split('\n')
+                    .filter((line) => line != '')
+                    .map((line) => JSON.parse(line))
+                    .forEach((command_list) => {
+                        const command = command_list[0];
+                        const data = command_list.slice(1);
+                        this.emit(command, data);
+                    });
             });
 
             this.process.stderr?.on('data', (data: Buffer) => {
