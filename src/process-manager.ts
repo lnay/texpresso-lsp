@@ -5,7 +5,7 @@ export class TexpressoProcessManager extends EventEmitter {
     private process: ChildProcess | null = null;
     private isRunning: boolean = false;
 
-    constructor(private executablePath: string = 'texpresso') {
+    constructor(private executablePath: string = 'texpresso', private args: string[] = ['-json', '-lines', 'main.tex']) {
         super();
     }
 
@@ -15,7 +15,7 @@ export class TexpressoProcessManager extends EventEmitter {
         }
 
         try {
-            this.process = spawn(this.executablePath, [], {
+            this.process = spawn(this.executablePath, this.args, {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
