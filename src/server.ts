@@ -9,9 +9,13 @@ import {
     Range,
     TextDocumentChangeEvent,
     InitializeParams,
-    InitializeResult
+    InitializeResult,
+    NotificationHandler,
+    DidChangeTextDocumentParams,
+    TextDocumentContentChangeEvent,
+    DidOpenTextDocumentParams,
 } from 'vscode-languageserver/node';
-import { TextDocument } from 'vscode-languageserver-textdocument';
+import { TextDocument, DocumentUri } from 'vscode-languageserver-textdocument';
 import {
     CustomDiagnostic,
     DiagnosticTag,
@@ -23,6 +27,7 @@ import {
 } from './types';
 import { TexpressoProcessManager } from './process-manager';
 import { spawn } from 'child_process';
+import { join } from 'path';
 
 // Default server configuration
 const defaultConfig: ServerConfig = {
@@ -87,10 +92,62 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
 
 // Handle text document changes
 documents.onDidChangeContent(async (changeEvent: TextDocumentChangeEvent<TextDocument>) => {
+    //const document = changeEvent.document;
+    //if (!document) return;
     const document = changeEvent.document;
-    if (!document) return;
+    const path = document.uri.replace("file://", "");
+    const text = document.getText();
 
-    return;
+    const message = JSON.stringify(['open', path, text]);
+    connection.console.log(`asking texpresso to open document: ${path}`);
+    texpressoProcess.sendCommand(message);
+});
+
+documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
+    const document = event.document;
+    const path = document.uri.replace("file://", "");
+    const text = document.getText();
+
+
+    const message = JSON.stringify(['open', path, text]);
+    connection.console.log(`asking texpresso to open document: ${path}`);
+    texpressoProcess.sendCommand(message);
+});
+
+documents.onDidSave(async (event: TextDocumentChangeEvent<TextDocument>) => {
+    const path = event.document.uri.replace("file://", "");
+    const text = event.document.getText();
+    
+    const message = JSON.stringify(['open', path, text]);
+    connection.console.log(`asking texpresso to open document: ${path}`);
+    texpressoProcess.sendCommand(message);
+});
+
+documents.onDidClose(async (event: TextDocumentChangeEvent<TextDocument>) => {
+    const path = event.document.uri.replace("file://", "");
+    const message = JSON.stringify(['close', path]);
+    
+    texpressoProcess.sendCommand(message);
+});
+
+connection.onDidChangeTextDocument(async (params: DidChangeTextDocumentParams) => {
+    const document = documents.get(params.textDocument.uri); // can this be out of sync?
+    if (!document) return;
+    const path = params.textDocument.uri.replace("file://", "");
+    params.contentChanges.forEach((change) => {
+        if (TextDocumentContentChangeEvent.isIncremental(change)){
+            const start_offset = document.offsetAt(change.range.start)
+            const end_offset = document.offsetAt(change.range.end)
+            const length = end_offset - start_offset;
+            const new_text = change.text;
+
+            const message = ['change', path, start_offset, length, new_text];
+            connection.console.log(`asking texpresso to change: ${JSON.stringify(message)}`);
+            texpressoProcess.sendCommand(JSON.stringify(message));
+        }
+    });
+    
+    
 });
 
 // Handle server shutdown

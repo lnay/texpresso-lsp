@@ -5,7 +5,7 @@ export class TexpressoProcessManager extends EventEmitter {
     private process: ChildProcess | null = null;
     private isRunning: boolean = false;
 
-    constructor(private executablePath: string = 'texpresso', private args: string[] = ['-json', '-lines', 'main.tex']) {
+    constructor(private executablePath: string = 'texpresso', private args: string[] = ['-json', 'main.tex']) {
         super();
     }
 
@@ -86,30 +86,31 @@ export class TexpressoProcessManager extends EventEmitter {
         });
     }
 
-    public async sendCommand(command: string): Promise<string> {
+    public async sendCommand(command: string) {
         if (!this.isRunning || !this.process?.stdin || !this.process?.stdout) {
             throw new Error('Process is not running or stdio not available');
         }
+        this.process?.stdin?.write(command + '\n');
 
-        return new Promise<string>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Command timeout'));
-            }, 5000);
+        // return new Promise<string>((resolve, reject) => {
+        //     const timeout = setTimeout(() => {
+        //         reject(new Error('Command timeout'));
+        //     }, 5000);
 
-            let response = '';
+        //     let response = '';
 
-            const dataHandler = (data: Buffer) => {
-                response += data.toString();
-                if (response.includes('\n')) {
-                    clearTimeout(timeout);
-                    this.process?.stdout?.removeListener('data', dataHandler);
-                    resolve(response.trim());
-                }
-            };
+        //     const dataHandler = (data: Buffer) => {
+        //         response += data.toString();
+        //         if (response.includes('\n')) {
+        //             clearTimeout(timeout);
+        //             this.process?.stdout?.removeListener('data', dataHandler);
+        //             resolve(response.trim());
+        //         }
+        //     };
 
-            this.process?.stdout?.on('data', dataHandler);
-            this.process?.stdin?.write(command + '\n');
-        });
+        //     this.process?.stdout?.on('data', dataHandler);
+        //     this.process?.stdin?.write(command + '\n');
+        // });
     }
 
     public isProcessRunning(): boolean {
