@@ -103,9 +103,8 @@ documents.onDidChangeContent(
         const path = document.uri.replace("file://", "");
         const text = document.getText();
 
-        const message = JSON.stringify(["open", path, text]);
         connection.console.warn(`asking texpresso to open document: ${path}`);
-        texpressoProcess.sendCommand(message);
+        texpressoProcess.sendCommand("open", [path, text]);
     },
 );
 
@@ -114,18 +113,15 @@ documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
     const path = document.uri.replace("file://", "");
     const text = document.getText();
 
-    const message = JSON.stringify(["open", path, text]);
     connection.console.warn(`asking texpresso to open document: ${path}`);
-    texpressoProcess.sendCommand(message);
+    texpressoProcess.sendCommand("open", [path, text]);
 });
 
 documents.onDidSave(async (event: TextDocumentChangeEvent<TextDocument>) => {});
 
 documents.onDidClose(async (event: TextDocumentChangeEvent<TextDocument>) => {
     const path = event.document.uri.replace("file://", "");
-    const message = JSON.stringify(["close", path]);
-
-    texpressoProcess.sendCommand(message);
+    texpressoProcess.sendCommand("close", [path]);
 });
 
 connection.onDidChangeTextDocument(
@@ -135,8 +131,7 @@ connection.onDidChangeTextDocument(
         const path = params.textDocument.uri.replace("file://", "");
         params.contentChanges.forEach((change) => {
             if (TextDocumentContentChangeEvent.isIncremental(change)) {
-                const message = [
-                    "change-range",
+                const change_data = [
                     path,
                     change.range.start.line,
                     change.range.start.character,
@@ -145,9 +140,9 @@ connection.onDidChangeTextDocument(
                     change.text,
                 ];
                 connection.console.warn(
-                    `asking texpresso to change: ${JSON.stringify(message)}`,
+                    `asking texpresso to change: ${path} at ${change.range.start.line}:${change.range.start.character} to ${change.range.end.line}:${change.range.end.character}`,
                 );
-                texpressoProcess.sendCommand(JSON.stringify(message));
+                texpressoProcess.sendCommand("change-range", change_data);
             }
         });
     },

@@ -91,11 +91,13 @@ export class TexpressoProcessManager extends EventEmitter {
         });
     }
 
-    public async sendCommand(command: string) {
+    public async sendCommand(command: string, data: any[]) {
         if (!this.isRunning || !this.process?.stdin || !this.process?.stdout) {
             throw new Error("Process is not running or stdio not available");
         }
-        this.process?.stdin?.write(command + "\n");
+
+        const message = JSON.stringify([command, ...data]);
+        this.process?.stdin?.write(message + "\n");
     }
 
     public isProcessRunning(): boolean {
