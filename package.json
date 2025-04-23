@@ -1,6 +1,6 @@
 {
   "name": "texpresso-lsp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A simple Language Server Protocol implementation",
   "main": "dist/server.js",
   "bin": "bin/texpresso-lsp.sh",
