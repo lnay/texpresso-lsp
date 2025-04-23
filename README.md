@@ -2,14 +2,32 @@
 
 A simple Language Server Protocol implementation using the vscode-languageserver library with TypeScript support.
 
-## Features
+## Currently implemented features
 
-- Text document change handling
-- Basic diagnostics (line length checking)
-- Full TypeScript support with type checking
-- Type hints and annotations
+- [x] Live preview
+- [x] Inverse search (zed only)
+- [ ] Forward search following cursor
+
+## Purpose
+
+This is an experimental implementation of a Language Server Protocol (LSP) server wrapping around [TeXpresso](https://github.com/let-def/texpresso) executable. See https://github.com/let-def/texpresso/issues/36.
+
+This is a "cheap" nodeJS implementation for quick and easy testing.
+This could potentially be rewritten in something other than TypeScript, but it is a pretty thin interface, where the JavaScript is not responsible for much and what it is responsible for (JSON parsing and manipulation) is stuff that is well suited to (in terms of performance and ergonomics).
 
 ## Setup
+
+1. Install TeXpresso, more specifically it needs to be built from this branch: https://github.com/lnay/texpresso/tree/utf-8.
+2. Make the `texpresso` executable available in your PATH.
+3. Set up with editor with the following initialization options:
+```jsonc
+{
+  "root_tex": "path/to/root.tex" // can be relative to the workspace root
+  // ^ defaults to "main.tex" if not specified
+}
+```
+
+## Generic npm package instructions
 
 1. Install dependencies:
 ```bash
@@ -30,18 +48,3 @@ For development:
 ```bash
 npm run dev
 ```
-
-## Implementation Details
-
-The server currently implements:
-- `textDocument/didChange` event handling with proper TypeScript types
-- Basic diagnostics that check for lines longer than 80 characters
-- Type-safe implementation using TypeScript
-
-## Extending
-
-To add more capabilities, you can:
-1. Add new capability declarations in the `onInitialize` handler
-2. Implement new event handlers using `connection.on()`
-3. Add new diagnostic rules in the `generateDiagnostics` function
-4. Add new TypeScript interfaces and types for your features 
