@@ -13,7 +13,8 @@ A simple Language Server Protocol implementation using the vscode-languageserver
 This is an experimental implementation of a Language Server Protocol (LSP) server wrapping around [TeXpresso](https://github.com/let-def/texpresso) executable. See https://github.com/let-def/texpresso/issues/36.
 
 This is a "cheap" nodeJS implementation for quick and easy testing.
-This could potentially be rewritten in something other than TypeScript, but it is a pretty thin interface, where the JavaScript is not responsible for much and what it is responsible for (JSON parsing and manipulation) is stuff that is well suited to (in terms of performance and ergonomics).
+However this could also still be fit for purpose in its final form since it is a pretty thin interface
+where the JavaScript is not responsible for much and what it is responsible for (JSON parsing and manipulation) is stuff that is well suited to (in terms of performance and ergonomics).
 
 ## Setup
 
