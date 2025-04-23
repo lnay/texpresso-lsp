@@ -27,12 +27,21 @@ import {
 import { TexpressoProcessManager } from "./process-manager";
 import { spawn } from "child_process";
 import { join } from "path";
+import { subtle } from "crypto";
 
 const defaultConfig: ServerConfig = {
     root_tex: "main.tex",
+    texpresso_path: "texpresso", // assume texpresso is in PATH
+    inverse_search: {
+        command: "zed",
+        arguments: ["%f:%l"],
+    },
 };
 
-const connection = createConnection(ProposedFeatures.all);
+const connection = {
+    config: defaultConfig,
+    ...createConnection(ProposedFeatures.all),
+};
 const documents = new TextDocuments(TextDocument);
 let texpressoProcess: TexpressoProcessManager;
 
@@ -43,13 +52,27 @@ documents.listen(connection);
 connection.onInitialize(
     async (params: InitializeParams): Promise<InitializeResult> => {
         try {
-            // Get configuration from client, falling back to defaults
-            const config: ServerConfig = {
-                root_tex: params.initializationOptions?.root_tex ?? defaultConfig.root_tex,
-            };
+            {
+                // Get configuration from client when available
+                let init_params;
+                if ((init_params = params.initializationOptions)) {
+                    connection.config.root_tex =
+                        init_params.root_tex ?? defaultConfig.root_tex;
+                    connection.config.texpresso_path =
+                        init_params.texpresso_path ??
+                        defaultConfig.texpresso_path;
+                    connection.config.inverse_search =
+                        init_params.inverse_search ??
+                        defaultConfig.inverse_search;
+                }
+            }
 
             // Create process manager with config
-            texpressoProcess = new TexpressoProcessManager("texpresso", ["-json", "-lines"], config.root_tex);
+            texpressoProcess = new TexpressoProcessManager(
+                connection.config.texpresso_path,
+                ["-json", "-lines"],
+                connection.config.root_tex,
+            );
             await texpressoProcess.start();
             connection.console.info("Texpresso process started successfully");
 
@@ -79,7 +102,17 @@ connection.onInitialize(
                 connection.console.warn(
                     `Synctex inverse search received: ${JSON.stringify(data)}`,
                 );
-                spawn("zed", [`${data[0]}:${data[1]}:1`]);
+                const path = data[0];
+                const line = data[1];
+                const command = connection.config.inverse_search.command;
+                const subs_args =
+                    connection.config.inverse_search.arguments.map((arg) =>
+                        arg.replace("%f", path).replace("%l", line),
+                    );
+                connection.console.log(
+                    `Executing inverse search command: ${connection.config.inverse_search.command} ${subs_args.join(" ")}`,
+                );
+                spawn(command, subs_args);
             });
 
             texpressoProcess.on("append-lines", (data) => {

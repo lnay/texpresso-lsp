@@ -14,6 +14,11 @@ export enum DiagnosticTag {
 // Configuration interface
 export interface ServerConfig {
     root_tex: string;
+    texpresso_path: string;
+    inverse_search: {
+        command: string;
+        arguments: string[]; // use %f and %l as placeholders for file and line number
+    };
 }
 
 // Custom rule interface

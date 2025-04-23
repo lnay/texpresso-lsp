@@ -5,7 +5,7 @@ A simple Language Server Protocol implementation using the vscode-languageserver
 ## Currently implemented features
 
 - [x] Live preview
-- [x] Inverse search (zed only)
+- [x] Inverse search
 - [ ] Forward search following cursor
 
 ## Purpose
@@ -19,12 +19,19 @@ where the JavaScript is not responsible for much and what it is responsible for 
 ## Setup
 
 1. Install TeXpresso, more specifically it needs to be built from this branch: https://github.com/lnay/texpresso/tree/utf-8.
-2. Make the `texpresso` executable available in your PATH.
+2. Make the `texpresso` executable available in your PATH, or make sure to specify its path in the next step.
 3. Set up with editor with the following initialization options:
 ```jsonc
 {
   "root_tex": "path/to/root.tex" // can be relative to the workspace root
   // ^ defaults to "main.tex" if not specified
+  "texpresso_path": "path/to/texpresso" // can be missed if texpresso is in PATH
+  // command to open the editor at a given file and line number:
+  "inverse_search": {
+    "command": "zed",
+    "arguments": ["%f:%l"]
+    // %f and %l are placeholders for the file path and line number respectively
+  }
 }
 ```
 
