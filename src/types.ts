@@ -13,9 +13,7 @@ export enum DiagnosticTag {
 
 // Configuration interface
 export interface ServerConfig {
-    maxLineLength: number;
-    enableWarnings: boolean;
-    customRules: CustomRule[];
+    root_tex: string;
 }
 
 // Custom rule interface

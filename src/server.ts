@@ -29,14 +29,12 @@ import { spawn } from "child_process";
 import { join } from "path";
 
 const defaultConfig: ServerConfig = {
-    maxLineLength: 50,
-    enableWarnings: true,
-    customRules: [],
+    root_tex: "main.tex",
 };
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
-const texpressoProcess = new TexpressoProcessManager();
+let texpressoProcess: TexpressoProcessManager;
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
@@ -45,6 +43,13 @@ documents.listen(connection);
 connection.onInitialize(
     async (params: InitializeParams): Promise<InitializeResult> => {
         try {
+            // Get configuration from client, falling back to defaults
+            const config: ServerConfig = {
+                root_tex: params.initializationOptions?.root_tex ?? defaultConfig.root_tex,
+            };
+
+            // Create process manager with config
+            texpressoProcess = new TexpressoProcessManager("texpresso", ["-json", "-lines"], config.root_tex);
             await texpressoProcess.start();
             connection.console.info("Texpresso process started successfully");
 

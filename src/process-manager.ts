@@ -6,10 +6,12 @@ export class TexpressoProcessManager extends EventEmitter {
     private isRunning: boolean = false;
 
     constructor(
-        private executablePath: string = "texpresso",
-        private args: string[] = ["-json", "-lines", "main.tex"],
+        private executablePath: string,
+        private args: string[],
+        private rootTex: string
     ) {
         super();
+        this.args.push(this.rootTex);
     }
 
     public async start(): Promise<void> {
