@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A simple Language Server Protocol implementation",
   "main": "dist/server.js",
+  "bin": "bin/texpresso-lsp.sh",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
@@ -18,4 +19,4 @@
     "typescript": "^5.3.3",
     "ts-node": "^10.9.2"
   }
-} 
+}
