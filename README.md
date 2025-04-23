@@ -19,21 +19,26 @@ where the JavaScript is not responsible for much and what it is responsible for 
 ## Setup
 
 1. Install TeXpresso, more specifically it needs to be built from this branch: https://github.com/lnay/texpresso/tree/utf-8.
-2. Make the `texpresso` executable available in your PATH, or make sure to specify its path in the next step.
-3. Set up with editor with the following initialization options:
-```jsonc
-{
-  "root_tex": "path/to/root.tex", // can be relative to the workspace root
-  // ^ defaults to "main.tex" if not specified
-  "texpresso_path": "path/to/texpresso", // can be missed if texpresso is in PATH
-  // command to open the editor at a given file and line number:
-  "inverse_search": {
-    "command": "zed",
-    "arguments": ["%f:%l"],
-    // %f and %l are placeholders for the file path and line number respectively
+2. Make the `texpresso` executable available in your PATH, or make sure to specify its path in step 4.
+3. Install the language server, either from this repo or just:
+   ```bash
+   npm install -g texpresso-lsp
+   ```
+4. Set up the editor to run the language server with `texpresso-lsp --stdio` with the following initialization options:
+  ```jsonc
+  {
+    "root_tex": "path/to/root.tex", // can be relative to the workspace root
+    // ^ defaults to "main.tex" if not specified
+    "texpresso_path": "path/to/texpresso", // can be missed if texpresso is in PATH
+    // command to open the editor at a given file and line number:
+    "inverse_search": {
+      "command": "zed",
+      "arguments": ["%f:%l"],
+      // %f and %l are placeholders for the file path and line number respectively
+    }
   }
-}
-```
+  ```
+  For `zed`, just install the following extension instead of step 4 (and maybe 3 soon): https://github.com/lnay/zed-texpresso
 
 ## Generic npm package instructions
 
