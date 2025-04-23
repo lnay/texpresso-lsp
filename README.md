@@ -23,13 +23,13 @@ where the JavaScript is not responsible for much and what it is responsible for 
 3. Set up with editor with the following initialization options:
 ```jsonc
 {
-  "root_tex": "path/to/root.tex" // can be relative to the workspace root
+  "root_tex": "path/to/root.tex", // can be relative to the workspace root
   // ^ defaults to "main.tex" if not specified
-  "texpresso_path": "path/to/texpresso" // can be missed if texpresso is in PATH
+  "texpresso_path": "path/to/texpresso", // can be missed if texpresso is in PATH
   // command to open the editor at a given file and line number:
   "inverse_search": {
     "command": "zed",
-    "arguments": ["%f:%l"]
+    "arguments": ["%f:%l"],
     // %f and %l are placeholders for the file path and line number respectively
   }
 }
