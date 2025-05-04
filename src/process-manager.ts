@@ -8,7 +8,7 @@ export class TexpressoProcessManager extends EventEmitter {
     constructor(
         private executablePath: string,
         private args: string[],
-        private rootTex: string
+        private rootTex: string,
     ) {
         super();
         this.args.push(this.rootTex);

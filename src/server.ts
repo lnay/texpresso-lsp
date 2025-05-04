@@ -28,6 +28,7 @@ import { TexpressoProcessManager } from "./process-manager";
 import { spawn } from "child_process";
 import { join } from "path";
 import { subtle } from "crypto";
+import { URI } from "vscode-uri";
 
 const defaultConfig: ServerConfig = {
     root_tex: "main.tex",
@@ -148,7 +149,8 @@ documents.onDidChangeContent(
 
 documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
     const document = event.document;
-    const path = document.uri.replace("file://", "");
+    const uri = URI.parse(event.document.uri);
+    const path = uri.path;
     const text = document.getText();
 
     connection.console.warn(`asking texpresso to open document: ${path}`);
@@ -158,7 +160,8 @@ documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
 documents.onDidSave(async (event: TextDocumentChangeEvent<TextDocument>) => {});
 
 documents.onDidClose(async (event: TextDocumentChangeEvent<TextDocument>) => {
-    const path = event.document.uri.replace("file://", "");
+    const uri = URI.parse(event.document.uri);
+    const path = uri.path;
     texpressoProcess.sendCommand("close", [path]);
 });
 
@@ -166,7 +169,7 @@ connection.onDidChangeTextDocument(
     async (params: DidChangeTextDocumentParams) => {
         const document = documents.get(params.textDocument.uri); // can this be out of sync?
         if (!document) return;
-        const path = params.textDocument.uri.replace("file://", "");
+        const path = URI.parse(params.textDocument.uri).path;
         params.contentChanges.forEach((change) => {
             if (TextDocumentContentChangeEvent.isIncremental(change)) {
                 const change_data = [
