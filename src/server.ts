@@ -3,44 +3,36 @@ import {
     TextDocuments,
     ProposedFeatures,
     TextDocumentSyncKind,
-    Diagnostic,
-    DiagnosticSeverity,
-    Position,
-    Range,
     TextDocumentChangeEvent,
     InitializeParams,
     InitializeResult,
-    NotificationHandler,
     DidChangeTextDocumentParams,
     TextDocumentContentChangeEvent,
-    DidOpenTextDocumentParams,
+    DocumentHighlightParams,
+    DocumentHighlight,
 } from "vscode-languageserver/node";
-import { TextDocument, DocumentUri } from "vscode-languageserver-textdocument";
-import {
-    CustomDiagnostic,
-    DiagnosticTag,
-    ServerConfig,
-    CustomRule,
-    AnalysisResult,
-    DocumentStatistics,
-} from "./types";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { ServerConfig, WorkspaceSettings } from "./types";
 import { TexpressoProcessManager } from "./process-manager";
 import { spawn } from "child_process";
-import { join } from "path";
-import { subtle } from "crypto";
 import { URI } from "vscode-uri";
 
-const defaultConfig: ServerConfig = {
+const defaultInitOpts: ServerConfig = {
     root_tex: "main.tex",
-    texpresso_path: "texpresso", // assume texpresso is in PATH
+    texpresso_path: "texpresso", // assumes texpresso is in PATH
     inverse_search: {
         command: "zed",
         arguments: ["%f:%l"],
     },
 };
 
+const defaultWorkspaceSettings: WorkspaceSettings = {
+    preview_follow_cursor: true,
+};
+
 const connection = {
-    config: defaultConfig,
+    init_options: defaultInitOpts,
+    workspace_config: defaultWorkspaceSettings,
     ...createConnection(ProposedFeatures.all),
 };
 const documents = new TextDocuments(TextDocument);
@@ -57,22 +49,22 @@ connection.onInitialize(
                 // Get configuration from client when available
                 let init_params;
                 if ((init_params = params.initializationOptions)) {
-                    connection.config.root_tex =
-                        init_params.root_tex ?? defaultConfig.root_tex;
-                    connection.config.texpresso_path =
+                    connection.init_options.root_tex =
+                        init_params.root_tex ?? defaultInitOpts.root_tex;
+                    connection.init_options.texpresso_path =
                         init_params.texpresso_path ??
-                        defaultConfig.texpresso_path;
-                    connection.config.inverse_search =
+                        defaultInitOpts.texpresso_path;
+                    connection.init_options.inverse_search =
                         init_params.inverse_search ??
-                        defaultConfig.inverse_search;
+                        defaultInitOpts.inverse_search;
                 }
             }
 
             // Create process manager with config
             texpressoProcess = new TexpressoProcessManager(
-                connection.config.texpresso_path,
+                connection.init_options.texpresso_path,
                 ["-json", "-lines"],
-                connection.config.root_tex,
+                connection.init_options.root_tex,
             );
             await texpressoProcess.start();
             connection.console.info("Texpresso process started successfully");
@@ -105,13 +97,13 @@ connection.onInitialize(
                 );
                 const path = data[0];
                 const line = data[1];
-                const command = connection.config.inverse_search.command;
+                const command = connection.init_options.inverse_search.command;
                 const subs_args =
-                    connection.config.inverse_search.arguments.map((arg) =>
-                        arg.replace("%f", path).replace("%l", line),
+                    connection.init_options.inverse_search.arguments.map(
+                        (arg) => arg.replace("%f", path).replace("%l", line),
                     );
                 connection.console.log(
-                    `Executing inverse search command: ${connection.config.inverse_search.command} ${subs_args.join(" ")}`,
+                    `Executing inverse search command: ${connection.init_options.inverse_search.command} ${subs_args.join(" ")}`,
                 );
                 spawn(command, subs_args);
             });
@@ -125,6 +117,7 @@ connection.onInitialize(
             return {
                 capabilities: {
                     textDocumentSync: TextDocumentSyncKind.Incremental,
+                    documentHighlightProvider: true,
                 },
             };
         } catch (error) {
@@ -136,16 +129,41 @@ connection.onInitialize(
     },
 );
 
-documents.onDidChangeContent(
-    async (changeEvent: TextDocumentChangeEvent<TextDocument>) => {
-        const document = changeEvent.document;
-        const path = document.uri.replace("file://", "");
-        const text = document.getText();
+// Initialize workspace settings
+connection.onInitialized(async () => {
+    try {
+        const config = await connection.workspace.getConfiguration();
+        if (config) {
+            connection.workspace_config.preview_follow_cursor =
+                config.preview_follow_cursor ??
+                defaultWorkspaceSettings.preview_follow_cursor;
+            connection.console.log(
+                `Initialized workspace settings: preview_follow_cursor = ${connection.workspace_config.preview_follow_cursor}`,
+            );
+        }
+    } catch (error) {
+        connection.console.error(
+            `Failed to initialize configuration: ${error}`,
+        );
+    }
+});
 
-        connection.console.warn(`asking texpresso to open document: ${path}`);
-        texpressoProcess.sendCommand("open", [path, text]);
-    },
-);
+// Handle workspace configuration changes
+connection.onDidChangeConfiguration(async (change) => {
+    connection.console.log("Configuration changed");
+    try {
+        const config = change.settings;
+        if (config && config.preview_follow_cursor !== undefined) {
+            connection.workspace_config.preview_follow_cursor =
+                config.preview_follow_cursor;
+            connection.console.log(
+                `Updated workspace settings: preview_follow_cursor = ${connection.workspace_config.preview_follow_cursor}`,
+            );
+        }
+    } catch (error) {
+        connection.console.error(`Failed to get configuration: ${error}`);
+    }
+});
 
 documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
     const document = event.document;
@@ -186,6 +204,48 @@ connection.onDidChangeTextDocument(
                 texpressoProcess.sendCommand("change-range", change_data);
             }
         });
+    },
+);
+
+// Handle document highlight requests for preview_follow_cursor
+connection.onDocumentHighlight(
+    async (params: DocumentHighlightParams): Promise<DocumentHighlight[]> => {
+        // Check if preview_follow_cursor is enabled
+        if (!connection.workspace_config.preview_follow_cursor) {
+            connection.console.log(
+                "Document highlight ignored: preview_follow_cursor is disabled",
+            );
+            return [];
+        }
+
+        try {
+            // Extract file path and line number
+            const uri = URI.parse(params.textDocument.uri);
+            const filePath = uri.path;
+            const lineNumber = params.position.line + 1;
+
+            connection.console.log(
+                `Document highlight request: file=${filePath}, line=${lineNumber}`,
+            );
+
+            // Send synctex-forward command to texpresso process
+            texpressoProcess.sendCommand("synctex-forward", [
+                filePath,
+                lineNumber,
+            ]);
+
+            connection.console.log(
+                `Sent synctex-forward command: ${filePath} ${lineNumber}`,
+            );
+        } catch (error) {
+            connection.console.error(
+                `Error handling document highlight: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+
+        // Return empty array since we're not providing actual highlights,
+        // just using this as a trigger for the synctex-forward command
+        return [];
     },
 );
 

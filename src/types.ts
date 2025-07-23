@@ -21,6 +21,11 @@ export interface ServerConfig {
     };
 }
 
+// Workspace settings interface
+export interface WorkspaceSettings {
+    preview_follow_cursor: boolean;
+}
+
 // Custom rule interface
 export interface CustomRule {
     name: string;

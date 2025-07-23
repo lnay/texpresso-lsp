@@ -40,6 +40,19 @@ where the JavaScript is not responsible for much and what it is responsible for 
   ```
   For `zed`, just install the following extension instead of step 4 (and maybe 3 soon): https://github.com/lnay/zed-texpresso
 
+## Workspace Settings
+
+The language server supports the following workspace settings that can be configured in your editor:
+
+```jsonc
+{
+  "texpresso.preview_follow_cursor": true // default: true
+  // Controls whether the preview window follows the cursor position
+}
+```
+
+These settings can be changed at runtime and the language server will respond to configuration changes immediately.
+
 ## Generic npm package instructions
 
 1. Install dependencies:
