@@ -14,7 +14,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { ServerConfig, WorkspaceSettings } from "./types";
 import { TexpressoProcessManager } from "./process-manager";
-import { spawn } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import { URI } from "vscode-uri";
 
 const defaultInitOpts: ServerConfig = {
@@ -33,6 +33,7 @@ const defaultWorkspaceSettings: WorkspaceSettings = {
 const connection = {
     init_options: defaultInitOpts,
     workspace_config: defaultWorkspaceSettings,
+    is_texpresso_tonic_running: false,
     ...createConnection(ProposedFeatures.all),
 };
 const documents = new TextDocuments(TextDocument);
@@ -175,7 +176,24 @@ documents.onDidOpen(async (event: TextDocumentChangeEvent<TextDocument>) => {
     texpressoProcess.sendCommand("open", [path, text]);
 });
 
-documents.onDidSave(async (event: TextDocumentChangeEvent<TextDocument>) => {});
+documents.onDidSave(async (event: TextDocumentChangeEvent<TextDocument>) => {
+    const path = connection.init_options.root_tex;
+    const texpresso_tonic_path = connection.init_options.texpresso_path + "-tonic";
+
+    if (connection.is_texpresso_tonic_running) {
+        connection.console.warn(`texpresso-tonic already running`);
+    }
+    connection.is_texpresso_tonic_running = true;
+    // FUTURE keep track of whether there are any undefined reference errors
+    // to potentially avoid unnecessary extra compiles?
+    connection.console.log(`spawning texpresso-tonic`);
+    spawn(texpresso_tonic_path, ["-k", path]).on("exit", () => {
+        connection.console.log(`texpresso-tonic ended`);
+        connection.is_texpresso_tonic_running = false;
+        // TODO maybe only do this if changes detected to sha of aux file?
+        texpressoProcess.sendCommand("rescan", []);
+    });
+});
 
 documents.onDidClose(async (event: TextDocumentChangeEvent<TextDocument>) => {
     const uri = URI.parse(event.document.uri);
