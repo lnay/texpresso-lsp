@@ -65,7 +65,7 @@ connection.onInitialize(
             texpressoProcess = new TexpressoProcessManager(
                 connection.init_options.texpresso_path,
                 ["-json", "-lines"],
-                connection.init_options.root_tex,
+                connection.init_options.root_tex
             );
             await texpressoProcess.start();
             connection.console.info("Texpresso process started successfully");

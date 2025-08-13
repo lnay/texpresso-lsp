@@ -4,6 +4,7 @@ import { EventEmitter } from "events";
 export class TexpressoProcessManager extends EventEmitter {
     private process: ChildProcess | null = null;
     private isRunning: boolean = false;
+    private stdout_buffer: string = '';
 
     constructor(
         private executablePath: string,
@@ -20,17 +21,23 @@ export class TexpressoProcessManager extends EventEmitter {
         }
 
         try {
-            this.process = spawn(this.executablePath, this.args, {
-                stdio: ["pipe", "pipe", "pipe"],
-            });
-
+            this.process = spawn(this.executablePath, this.args, { stdio: "pipe" });
             this.isRunning = true;
 
             this.process.stdout?.on("data", (data: Buffer) => {
-                data.toString()
-                    .split("\n")
+                this.stdout_buffer += data;
+                const lines = this.stdout_buffer.split("\n");
+                this.stdout_buffer = lines.pop()?? '';
+
+                lines
                     .filter((line) => line != "")
-                    .map((line) => JSON.parse(line))
+                    .map((line) => {
+                        try {
+                            return JSON.parse(line);
+                        } catch (e) {
+                            return ["parse-fail", line];
+                        }
+                    })
                     .forEach((command_list) => {
                         const command = command_list[0];
                         const data = command_list.slice(1);
